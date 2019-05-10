@@ -1,135 +1,127 @@
 var express = require('express');
 var app = express();
-var bcrypt = require('bcryptjs');
 
 var AutheticationMidleware = require('../midlewares/authentication');
+const SEED = require('../config/config').SEED;
 
-var User = require('../models/user');
+var Medic = require('../models/medic');
 
-/**
- * Get all users
- */
-app.get('/', (request, response, next) => {
+app.get('/', (request, response)=> {
     var offset = Number(request.query.offset) || 0;
-    User.find({}, 'name email img role')
+    Medic.find({}, 'name img user hospital')
         .skip(offset)
         .limit(5)
-        .exec((error, users)=>{
-            if(error) {
-                return response.status(500).json({
-                    ok: false,
-                    mensaje: 'Error retrieving data',
-                    errors: error,
-                });
-            }
-            User.count({}, (error, total)=>{
-                response.status(200).json({
-                    ok: true,
-                    total,
-                    users
-                });
+        .populate('user', 'name email')
+        .populate('hospital')
+        .exec((error, medics)=>{
+        if(error) {
+            return response.status(500).json({
+                ok: false,
+                mensaje: 'Error retrieving data',
+                errors: error,
+            });
+        }
+            Medic.count({}, (error, total)=>{
+            response.status(200).json({
+                ok: true,
+                total,
+                medics
             });
         });
+    });
 });
 
 /**
- * update user
+ * update Medic
  */
 app.put( '/:id', AutheticationMidleware.tokenVerification, (request, response) => {
     var id = request.params.id;
     var body = request.body;
 
-
-    User.findById( id, (error, user)=>{
+    Medic.findById( id, (error, medic)=>{
         if(error) {
             return response.status(500).json({
                 ok: false,
-                message: 'Error getting User',
+                message: 'Error getting Medic',
                 errors: error,
             });
         }
 
-        if( !user ) {
+        if( !medic ) {
             return response.status(400).json({
                 ok: false,
-                message: 'User doesn\'t exists',
-                errors: { message: "User doesn't exists"},
+                message: 'Medic doesn\'t exists',
+                errors: { message: "Medic doesn't exists"},
             });
         }
-        user.name = body.name;
-        user.email = body.email;
-        user.role = body.role;
+        medic.name = body.name;
+        medic.user = request.userLogged._id;
+        medic.hospital = body.hospital;
 
-        user.save( (error, savedUser)=>{
+        medic.save( (error, savedMedic)=>{
             if(error) {
                 return response.status(400).json({
                     ok: false,
-                    message: 'Error creating User',
+                    message: 'Error creating Medic',
                     errors: error,
                 });
             }
-            var returnUser = ( ({_id, name, email, role}) => ({_id, name, email,role}) )(savedUser);
+            var returnMedic = ( ({_id, name, img, user, hospital}) => ({_id, name, img, user, hospital}) )(savedMedic);
             response.status(200).json({
                 ok: true,
-                user: returnUser,
+                medic: returnMedic,
             });
         });
     });
 });
 
 /**
- * Add user
+ * Add Medic
  */
 app.post('/', AutheticationMidleware.tokenVerification, (request, response) => {
     var body = request.body;
-    var usuario = new User({
+    var hospital = new Medic({
         name: body.name,
-        email: body.email,
-        password: bcrypt.hashSync(body.password),
-        img: body.img,
-        role: body.role,
+        user: request.userLogged._id,
+        hospital: body.hospital
     });
-
-    usuario.save( ( error, saveUser )=> {
+    hospital.save( ( error, saveMedic )=> {
 
         if(error) {
             return response.status(400).json({
                 ok: false,
-                message: 'Error creating User',
+                message: 'Error creating Medic',
                 errors: error,
             });
         }
 
         response.status(200).json({
             ok: true,
-            user: saveUser,
-            userLogged: request.userLogged,
+            medic: saveMedic,
         });
     });
 
 });
 
 /**
- * Delete a User
+ * Delete a Medic
  */
 app.delete('/:id', AutheticationMidleware.tokenVerification, (request, response) => {
     var id = request.params.id;
 
-
-    User.findByIdAndRemove(id, (error, deletedUser) => {
+    Medic.findByIdAndRemove(id, (error, deletedMedic) => {
         if (error) {
             return response.status(500).json({
                 ok: false,
-                message: 'Error getting User',
+                message: 'Error getting Medic',
                 errors: error,
             });
         }
 
         response.status(200).json({
             ok: true,
-            user: deletedUser,
+            medic: deletedMedic,
         });
     });
 });
-
 module.exports = app;
