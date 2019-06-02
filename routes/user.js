@@ -1,35 +1,40 @@
 var express = require('express');
 var app = express();
 var bcrypt = require('bcryptjs');
+var cors = require('cors')
 
 var AutheticationMidleware = require('../midlewares/authentication');
 
 var User = require('../models/user');
 
+
 /**
- * Get all users
+ * Get users
  */
-app.get('/', (request, response, next) => {
-    var offset = Number(request.query.offset) || 0;
-    User.find({}, 'name email img role')
-        .skip(offset)
-        .limit(5)
-        .exec((error, users)=>{
-            if(error) {
-                return response.status(500).json({
-                    ok: false,
-                    mensaje: 'Error retrieving data',
-                    errors: error,
-                });
-            }
-            User.count({}, (error, total)=>{
-                response.status(200).json({
-                    ok: true,
-                    total,
-                    users
-                });
+app.get('/user', AutheticationMidleware.tokenVerification, (request, response) => {
+
+    User.findById( request.userLogged._id, 'name email img' , (error, user)=>{
+        if(error) {
+            return response.status(500).json({
+                ok: false,
+                message: 'Error getting User',
+                errors: error,
             });
+        }
+        if( !user ) {
+            return response.status(400).json({
+                ok: false,
+                message: 'User doesn\'t exists',
+                errors: { message: "User doesn't exists"},
+            });
+        }
+        response.status(200).json({
+            ok: true,
+            data: {
+                user: user
+            }
         });
+    });
 });
 
 /**
@@ -80,7 +85,7 @@ app.put( '/:id', AutheticationMidleware.tokenVerification, (request, response) =
 /**
  * Add user
  */
-app.post('/', AutheticationMidleware.tokenVerification, (request, response) => {
+app.post('/users', (request, response) => {
     var body = request.body;
     var usuario = new User({
         name: body.name,

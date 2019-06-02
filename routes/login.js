@@ -15,7 +15,7 @@ var User = require('../models/user');
 app.post('/', (request, response)=>{
     var body = request.body;
 
-    User.findOne({ email: body.email }, (error, user)=>{
+    User.findOne({ email: body.username }, (error, user)=>{
         if(error) {
             return response.status(500).json({
                 ok: false,
@@ -48,8 +48,10 @@ app.post('/', (request, response)=>{
         user.password = '*********';
         response.status(200).json({
             ok: true,
-            token,
-            user
+            data: {
+                token,
+                user
+            }
         });
     });
 });
@@ -112,8 +114,10 @@ app.post('/google', async (request, response)=>{
             user.password = '*********';
             return response.status(200).json({
                 ok: true,
-                token,
-                user
+                data: {
+                    token,
+                    user
+                }
             });
         } else {
             var newUser = new User();
@@ -136,8 +140,10 @@ app.post('/google', async (request, response)=>{
                 savedUser.password = '*********';
                 return response.status(200).json({
                     ok: true,
-                    token,
-                    savedUser
+                    data: {
+                        token,
+                        savedUser
+                    }
                 });
             });
         }

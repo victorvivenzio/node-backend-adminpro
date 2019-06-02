@@ -1,18 +1,22 @@
 var jwt = require('jsonwebtoken');
 var SEED = require('../config/config').SEED;
 
-exports.tokenVerification = function(request, response, next) {
-    var token = request.query.token;
+exports.tokenVerification = function(req, res, next) {
+    if (!req.headers.authorization || req.headers.authorization.indexOf('Bearer ') === -1) {
+        return res.status(401).json({ message: 'Missing Authorization Header' });
+    }
+
+    var token = req.headers.authorization.split(' ')[1];
 
     jwt.verify( token, SEED, (error, decoded) => {
         if(error) {
-            return response.status(401).json({
+            return res.status(401).json({
                 ok: false,
                 message: 'Unauthorized',
                 errors: error,
             });
         }
-        request.userLogged = decoded.user;
+        req.userLogged = decoded.user;
         next();
     });
 
